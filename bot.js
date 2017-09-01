@@ -194,6 +194,7 @@ client.on('message', msg => {
              
               list.removeNode(deadPersonC);
               listDM.removeNode(deadPersonC);
+                console.log('Dead Person T is'+deadPersonT);
               list.removeNode(deadPersonT);
               listDM.removeNode(deadPersonT);
           }
@@ -473,17 +474,20 @@ function waitVote(msg) {
       clearInterval(counter);
       var personWithMostVotes=findPersonWithMostVotes(msg);
       
-      client.channels.get('352403126940336129').send('Time is up! \nDuring the day, the student council locked away '+ suspects.findAt(personWithMostVotes).getData()+'.');
-    var index = list.indexOf(suspects.findAt(personWithMostVotes).getData());
-      if (index==0){
-        list.removeFirst();
-      listDM.removeFirst();
-    }else{
-      list.removeAt(index);
-      listDM.removeAt(index);
-    }
-
-    
+      if(personWithMostVotes==-1){
+          client.channels.get('352403126940336129').send('No one voted, so everyone is safe.');
+      }else{
+                client.channels.get('352403126940336129').send('Time is up! \nDuring the day, the student council locked away '+ suspects.findAt(personWithMostVotes).getData()+'.');
+                var index = list.indexOf(suspects.findAt(personWithMostVotes).getData());
+                if (index==0){
+                    list.removeFirst();
+                    listDM.removeFirst();
+                }else{
+                    list.removeAt(index);
+                    listDM.removeAt(index);
+                }          
+      }
+            
       if(list.getSize()==2){
           endingLastTwoLeft(msg);
       }
@@ -504,8 +508,6 @@ function waitVote(msg) {
            client.channels.get('352403126940336129').send('Alive: '+list.printList());
       }
 
-
-  
     }
 }
 
@@ -541,6 +543,12 @@ function vote(msg, vote){
 
 
 function findPersonWithMostVotes(msg){
+  
+ if(suspects.getSize()==0){
+     return -1;
+     
+ }else{
+       
   var maxIndex=0;
   var max= votes.findAt(0).getData();
 
@@ -559,6 +567,10 @@ function findPersonWithMostVotes(msg){
   }
 
   return maxIndex;
+     
+ }
+  
+  
 }
 function clearAll(){
 
