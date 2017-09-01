@@ -186,14 +186,16 @@ client.on('message', msg => {
         noteDeadT(msg, parts[1]);
         if(alreadyKillT== true){
         //remove the dead. 2 conditions: the same person died, or two were killed separately
+            console.log(deadPersonC+"&"+deadPersonT);
           if(deadPersonC===deadPersonT){
+
              removePersonfromLists(indexDeadPersonC);
           }else{
-              //2 people died
-              removePersonfromLists(indexDeadPersonC);
-              
-             var deadTID = list.indexOf(deadPersonT);
-             removePersonfromLists(deadTID);
+             
+              list.removeNode(deadPersonC);
+              listDM.removeNode(deadPersonC);
+              list.removeNode(deadPersonT);
+              listDM.removeNode(deadPersonT);
           }
             
         //4 situations     
@@ -367,6 +369,7 @@ function assignRoles(){
   let strCharmer = charmer; 
   idCharmer= strCharmer.replace(/[<@!>]/g, '');
   client.channels.get('352403126940336129').send(charmer+' is **The Charmer**. Charmer, choose someone to date using y!date @username');
+  client.channels.get('352403126940336129').send('Alive: '+list.printList());
   
   y = Math.floor(Math.random() * list.getSize()) ;
   
@@ -429,6 +432,7 @@ function noteDeadC(msg, dead){
   }else if (dead<list.getSize()){
     indexDeadPersonC= dead;
     deadPersonC=list.findAt(indexDeadPersonC).getData();
+      console.log("The dead person is "+deadPersonC);
     alreadyKillC=true;
     msg.channel.send("You have killed " + listDM.findAt(indexDeadPersonC).getData());
   }else{
@@ -443,6 +447,7 @@ function noteDeadT(msg, dead){
   }else if (dead<list.getSize()){
     indexDeadPersonT= dead;
     deadPersonT=list.findAt(indexDeadPersonT).getData();
+      console.log("The dead person is "+deadPersonT);
     alreadyKillT=true;
     msg.channel.send("You have killed " + listDM.findAt(indexDeadPersonT).getData());
   }else{
@@ -496,6 +501,7 @@ function waitVote(msg) {
             
       }else{
            client.channels.get('352403126940336129').send(charmer+' is **The Charmer**. Charmer, choose someone to date using y!date @username');
+           client.channels.get('352403126940336129').send('Alive: '+list.printList());
       }
 
 
@@ -666,6 +672,7 @@ function endingLastTwoLeft(msg){
                     clearAll();
     
 }
+
 
 
 client.login(config.token);
