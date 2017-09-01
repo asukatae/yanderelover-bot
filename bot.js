@@ -22,6 +22,9 @@ var lover;
 var deadPersonC;
 var deadPersonT;
 
+var indexDeadPersonC;
+var indexDeadPersonT;
+
 var idCharmer;
 var idKillerClassmate;
 var idKillerTeacher;
@@ -35,12 +38,12 @@ var alreadyKillC=false;
 var alreadyKillT=false;
 
 
-var weaponC=null;
-var weaponT=null;
+var weaponC=':pick:';
+var weaponT=':knife:';
 
 var sTime;
 var counter;
-var countDownVote = 60;
+var countDownVote = 180;
 var gameCont= false;
 
 client.on('ready', () => {
@@ -59,11 +62,7 @@ client.on('message', msg => {
   if (msg.content === config.prefix  + '!' + 'rules') {
 	msg.channel.send('Everybody wants to date **The Charmer**, but not everyone can. In each round, **The Charmer** chooses someone to date. However, there are two killers who love **The Charmer** and they can choose to kill whomever they wish except for her. If **The Charmer**’s lover dies, she will be forced to find another lover. Everyone votes who they think is the killer and puts him behind bars. The game ends when **The Charmer** has one last person to date, or if the killers are both dead or locked away.');
 
-	/*
-   msg.channel.send("This is the murder weapon", {
-    file: "http://s3files.core77.com/blog/images/2014/06/0toiletclogs003.jpg" // Or replace with FileOptions object
-  });
-  */
+	
   }
 
   if (msg.content === config.prefix  + '!' + 'join') {
@@ -89,13 +88,13 @@ client.on('message', msg => {
   if(parts[0] === config.prefix  + '!' + 'date'){
     if (msg.author.toString() === charmer){
       if(alreadyDate==false){
-        chooseBoyfriend(msg, parts[1]);
+        chooseLover(msg, parts[1]);
         if(alreadyDate== true){
-          if(killerClassmate!=null){
-            client.channels.get('352403126940336129').send('...and Killer Kindergaten Classmate is awake! DM me who you want to kill.');
+          if(list.contains(killerClassmate)){ 
+            client.channels.get('352403126940336129').send('...and **Killer Kindergaten Classmate** is awake! DM me who you want to kill.');
             client.fetchUser(idKillerClassmate).then(user => {user.send("The people alive are:\n"+ listDM.printDMList() +"\nTo kill, use y!killC number, ie. y!killC 0")});
           }else{
-            client.channels.get('352403126940336129').send('...and Killer Homeroom Teacher is awake! DM me who you want to kill.');
+            client.channels.get('352403126940336129').send('...and **Killer Homeroom Teacher** is awake! DM me who you want to kill.');
             client.fetchUser(idKillerTeacher).then(user => {user.send("The people alive are:\n"+ listDM.printDMList() +"\nTo kill, use y!killT number, ie. y!killT 0")});
           }
         }   
@@ -141,9 +140,35 @@ client.on('message', msg => {
       noteDeadC(msg, parts[1]);
       if(alreadyKillC== true){
         if (list.contains(killerTeacher)){
-          client.channels.get('352403126940336129').send('...and Killer Homeroom Teacher is awake! DM me who you want to kill.');
+          client.channels.get('352403126940336129').send('...and **Killer Homeroom Teacher** is awake! DM me who you want to kill.');
           client.fetchUser(idKillerTeacher).then(user => {user.send("The people alive are:\n"+ listDM.printDMList() +"\nTo kill, use y!killT number, ie. y!killT 0")});
         }else{ //teacher is dead
+            client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! '+ list.findAt(indexDeadPersonC).getData() +' has been found killed with a ' +weaponC);
+            removePersonfromLists(indexDeadPersonC);
+
+            if(list.getSize()==2){ //if last two people are Killer Classmate and Charmer
+              var indexCharmer = list.indexOf(charmer);
+                    if(indexCharmer==0){
+                      client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live happily ever after... except '+list.findAt(1).getData()+ ' is revealed to be **Killer Kindergarten Classmate!**');
+                      client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate** '+list.findAt(1).getData()+' has won the game!');
+                      client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate: **'+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                    }else{
+                      client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live happily ever after... except '+list.findAt(0).getData()+ ' is revealed to be **Killer Kindergarten Classmate!**');
+                      client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate** '+list.findAt(0).getData()+' has won the game!');
+                      client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate:** '+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                    }
+            }else{ //if there are more than 2 people left over
+                client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
+                         //clear continue game here
+                         clearContinue();
+
+                         while (!gameCont){
+                          sTime = new Date().getTime();
+                          counter = setInterval(function(){waitVote(msg)}, 500);
+                          gameCont=true;
+                        }
+            }
+            
 
         }
       }   
@@ -160,70 +185,119 @@ client.on('message', msg => {
       if(alreadyKillT==false){
         noteDeadT(msg, parts[1]);
         if(alreadyKillT== true){
-          //assuming that both killers are alive
-          if (deadPersonC===deadPersonT){
-              client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! '+ list.findAt(deadPersonC).getData() +' has been found slaughtered with a ' +weaponC+ 'and a '+weaponT);
-              removePersonfromLists(deadPersonC);
-              client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
+        //remove the dead. 2 conditions: the same person died, or two were killed separately
+          if(deadPersonC===deadPersonT){
+             removePersonfromLists(indexDeadPersonC);
+          }else{
+              //2 people died
+              removePersonfromLists(indexDeadPersonC);
+              
+             var deadTID = list.indexOf(deadPersonT);
+             removePersonfromLists(deadTID);
+          }
+            
+        //4 situations     
+            
+          if(!list.contains(killerClassmate)&& !list.contains(killerTeacher)){
+                   client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! \n'+ deadPersonC +' has been found killed with a ' +weaponC+' and ' + deadPersonT +' has been found killed with a ' +weaponT);
+                    client.channels.get('352403126940336129').send('Both killers killed each other.');
+                    client.channels.get('352403126940336129').send(charmer +' and ' + lover +' live... happily ever after!');
+                    client.channels.get('352403126940336129').send('Normal person '+lover +' and '+ charmer +' has won the game!');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate:** '+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                    clearAll(); 
+          }else if(list.contains(killerClassmate)&& list.contains(killerTeacher)){
+                   
+              if (indexDeadPersonC===indexDeadPersonT){
+                  client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! '+ deadPersonC +' has been found killed with a ' +weaponC+ 'and a '+weaponT);
+                    client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
+                         clearContinue();
                          while (!gameCont){
                           sTime = new Date().getTime();
                           counter = setInterval(function(){waitVote(msg)}, 500);
                           gameCont=true;
                         }
-          }else{
-              client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! \n'+ list.findAt(deadPersonC).getData() +' has been found slaughtered with a ' +weaponC+' and ' + list.findAt(deadPersonT).getData() +' has been found slaughtered with a ' +weaponT);
-              
-              var deadTID = list.findAt(deadPersonT).getData();
-              removePersonfromLists(deadPersonC);
-              var indexT = list.indexOf(deadTID);
-              removePersonfromLists(indexT);
-
-              if(list.getSize()==2){
-                //game over
-                var indexCharmer = list.indexOf(charmer);
-                if(indexCharmer==0){
-                  if(list.findAt(1).getData()==killerClassmate){
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live happily ever after... except '+list.findAt(1).getData()+ ' is revealed to be Killer Kindergarten Classmate!');
-                    client.channels.get('352403126940336129').send('Killer Kindergarten Classmate '+list.findAt(1).getData()+' has won the game!');
-                  }else if(list.findAt(1).getData()==killerTeacher){
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live happily ever after... except '+list.findAt(1).getData()+ ' is revealed to be Killer Homeroom Teacher!');
-                    client.channels.get('352403126940336129').send('Killer Homeroom Teacher '+list.findAt(1).getData()+' has won the game!');
-                  }
-                  else{
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live... happily ever after!');
-                    client.channels.get('352403126940336129').send('Normal guy '+list.findAt(1).getData()+' and '+ charmer +' has won the game!');
-                  }
-                  
-
-                }else{
-                  if(list.findAt(0).getData()==killerClassmate){
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live happily ever after... except '+list.findAt(0).getData()+ ' is revealed to be Killer Kindergarten Classmate!');
-                    client.channels.get('352403126940336129').send('Killer Kindergarten Classmate '+list.findAt(0).getData()+' has won the game!');
-                  }else if(list.findAt(0).getData()==killerTeacher){
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live happily ever after... except '+list.findAt(0).getData()+ ' is revealed to be Killer Homeroom Teacher!');
-                    client.channels.get('352403126940336129').send('Killer Homeroom Teacher '+list.findAt(0).getData()+' has won the game!');
-                  }
-                  else{
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live... happily ever after!');
-                    client.channels.get('352403126940336129').send('Normal guy '+list.findAt(0).getData()+' and '+ charmer +' has won the game!');
-                  }
-
-                }
-
-                clearAll();
-                client.channels.get('352403126940336129').send("Press y!join and y!play to play the game again.");
               }else{
-                client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
-                        while (!gameCont){
-                          sTime = new Date().getTime();
-                          counter = setInterval(function(){waitVote(msg)}, 500);
-                          gameCont=true;
-                        }
+                   client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! \n'+ deadPersonC +' has been found killed with a ' +weaponC+' and ' + deadPersonT +' has been found killed with a ' +weaponT);
+                  
+                     if(list.getSize()==2){
+                         endingLastTwoLeft(msg);
+                     }else{
+                           client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
+                           clearContinue();
+                           while (!gameCont){
+                            sTime = new Date().getTime();
+                            counter = setInterval(function(){waitVote(msg)}, 500);
+                            gameCont=true;
+                           }
+                     }
+              }
+          }else if(list.contains(killerClassmate)&& !list.contains(killerTeacher)){
+              if (killerTeacher===deadPersonC){
+                   client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! \n'+ deadPersonC +' has been found killed with a ' +weaponC+' and ' + deadPersonT +' has been found killed with a ' +weaponT);
+              
+                     if(list.getSize()==2){
+                         endingLastTwoLeft(msg);
+                     }else{
+                           client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
+                           clearContinue();
+                           while (!gameCont){
+                            sTime = new Date().getTime();
+                            counter = setInterval(function(){waitVote(msg)}, 500);
+                            gameCont=true;
+                           }
+                     }
+                  
+              }else{
+                  client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! \n'+ deadPersonC +' has been found killed with a ' +weaponC);
+              
+                     if(list.getSize()==2){
+                         endingLastTwoLeft(msg);
+                     }else{
+                           client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
+                           clearContinue();
+                           while (!gameCont){
+                            sTime = new Date().getTime();
+                            counter = setInterval(function(){waitVote(msg)}, 500);
+                            gameCont=true;
+                           }
+                     }
+              
+                  
               }
               
               
+          }else if(!list.contains(killerClassmate)&& list.contains(killerTeacher)){
+              if(killerClassmate===deadPersonT){
+                 client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! \n'+ deadPersonC +' has been found killed with a ' +weaponC+' and ' + deadPersonT +' has been found killed with a ' +weaponT);
+              
+                     if(list.getSize()==2){
+                         endingLastTwoLeft(msg);
+                     }else{
+                           client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
+                           clearContinue();
+                           while (!gameCont){
+                            sTime = new Date().getTime();
+                            counter = setInterval(function(){waitVote(msg)}, 500);
+                            gameCont=true;
+                           }
+                     }
+              }else{
+                  client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! \n'+ deadPersonT +' has been found killed with a ' +weaponT);
+              
+                     if(list.getSize()==2){
+                         endingLastTwoLeft(msg);
+                     }else{
+                           client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
+                           clearContinue();
+                           while (!gameCont){
+                            sTime = new Date().getTime();
+                            counter = setInterval(function(){waitVote(msg)}, 500);
+                            gameCont=true;
+                           }
+                     }
+              }       
+              
           }
-          
         }   
       }else{
         msg.channel.send('You\'ve already killed once.');
@@ -236,7 +310,7 @@ client.on('message', msg => {
     if (list.contains(msg.author.toString())){ 
       vote(msg, parts[1]);
     }else{
-      msg.reply('You are not playing in the game. Press w!join to vote.');
+      msg.reply('You died, or are not playing in the game. Press w!join to vote.');
     }
 
   }
@@ -260,6 +334,7 @@ function join(msg){
   else{
     list.insert(msg.author.toString());
     listDM.insert(msg.author.tag);
+    client.channels.get('352403126940336129').send('Welcome new classmate ' + msg.author.toString()+'!');
   }
   client.channels.get('352403126940336129').send('Players: ' + list.printList());
 }
@@ -316,10 +391,10 @@ function assignRoles(){
     console.log( killerTeacher +` is the killerTeacher!`);
     let strKillerTeacher= killerTeacher; //Just assuming some random tag.
     idKillerTeacher= strKillerTeacher.replace(/[<@!>]/g, '');
-    client.fetchUser(idKillerTeacher).then(user => {user.send("You are Killer Homeroom Teacher! Choose your weapon by entering y!weaponT emoji of choice, ie y!weaponT :knife:")});
+    client.fetchUser(idKillerTeacher).then(user => {user.send("You are **Killer Homeroom Teacher!** Choose your weapon by entering y!weaponT emoji of choice, ie y!weaponT :knife:")});
   }
 }
-function chooseBoyfriend(msg, lvr){
+function chooseLover(msg, lvr){
   if(lvr===charmer){
     msg.channel.send('You cannot date yourself. Please y!date @username again.');
   }else if(!list.contains(lvr)){
@@ -352,9 +427,10 @@ function noteDeadC(msg, dead){
   }else if(list.findAt(dead).getData()===charmer){
     msg.channel.send('Don\'t kill your crush! Please y!killC number again.');
   }else if (dead<list.getSize()){
-    deadPersonC= dead;
+    indexDeadPersonC= dead;
+    deadPersonC=list.findAt(indexDeadPersonC).getData();
     alreadyKillC=true;
-    msg.channel.send("You have killed " + listDM.findAt(deadPersonC).getData());
+    msg.channel.send("You have killed " + listDM.findAt(indexDeadPersonC).getData());
   }else{
     msg.channel.send("Unvalid number! Please y!killC number again.");
   }
@@ -365,9 +441,10 @@ function noteDeadT(msg, dead){
   }else if(list.findAt(dead).getData()===charmer){
     msg.channel.send('Don\'t kill your crush! Please y!killT number again.');
   }else if (dead<list.getSize()){
-    deadPersonT= dead;
+    indexDeadPersonT= dead;
+    deadPersonT=list.findAt(indexDeadPersonT).getData();
     alreadyKillT=true;
-    msg.channel.send("You have killed " + listDM.findAt(deadPersonT).getData());
+    msg.channel.send("You have killed " + listDM.findAt(indexDeadPersonT).getData());
   }else{
     msg.channel.send("Unvalid number! Please y!killT number again.");
   }
@@ -391,7 +468,7 @@ function waitVote(msg) {
       clearInterval(counter);
       var personWithMostVotes=findPersonWithMostVotes(msg);
       
-      client.channels.get('352403126940336129').send('Time is up! \nDuring the day, the students locked away '+ suspects.findAt(personWithMostVotes).getData()+'. \nNight falls...');
+      client.channels.get('352403126940336129').send('Time is up! \nDuring the day, the student council locked away '+ suspects.findAt(personWithMostVotes).getData()+'.');
     var index = list.indexOf(suspects.findAt(personWithMostVotes).getData());
       if (index==0){
         list.removeFirst();
@@ -403,72 +480,60 @@ function waitVote(msg) {
 
     
       if(list.getSize()==2){
-                //game over
-                var indexCharmer = list.indexOf(charmer);
-                if(indexCharmer==0){
-                  if(list.findAt(1).getData()==killerClassmate){
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live happily ever after... except '+list.findAt(1).getData()+ ' is revealed to be Killer Kindergarten Classmate!');
-                    client.channels.get('352403126940336129').send('Killer Kindergarten Classmate '+list.findAt(1).getData()+' has won the game!');
-                  }else if(list.findAt(1).getData()==killerTeacher){
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live happily ever after... except '+list.findAt(1).getData()+ ' is revealed to be Killer Homeroom Teacher!');
-                    client.channels.get('352403126940336129').send('Killer Homeroom Teacher '+list.findAt(1).getData()+' has won the game!');
-                  }
-                  else{
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live... happily ever after!');
-                    client.channels.get('352403126940336129').send('Normal guy '+list.findAt(1).getData()+' and '+ charmer +' has won the game!');
-                  }
-                  
+          endingLastTwoLeft(msg);
+      }
+      else if(!list.contains(killerClassmate)&& !list.contains(killerTeacher)) {
 
-                }else{
-                  if(list.findAt(0).getData()==killerClassmate){
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live happily ever after... except '+list.findAt(0).getData()+ ' is revealed to be Killer Kindergarten Classmate!');
-                    client.channels.get('352403126940336129').send('Killer Kindergarten Classmate '+list.findAt(0).getData()+' has won the game!');
-                  }else if(list.findAt(0).getData()==killerTeacher){
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live happily ever after... except '+list.findAt(0).getData()+ ' is revealed to be Killer Homeroom Teacher!');
-                    client.channels.get('352403126940336129').send('Killer Homeroom Teacher '+list.findAt(0).getData()+' has won the game!');
-                  }
-                  else{
-                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live... happily ever after!');
-                    client.channels.get('352403126940336129').send('Normal guy '+list.findAt(0).getData()+' and '+ charmer +' has won the game!');
-                  }
+                client.channels.get('352403126940336129').send(charmer +' and ' + lover +' live happily ever after!');
+                client.channels.get('352403126940336129').send('Normal person '+lover+' and '+ charmer +' has won the game!');
+                client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate:** '+killerClassmate+' **Killer Homeroom Teacher: **' + killerTeacher);
 
-                }
 
-                clearAll();
-                client.channels.get('352403126940336129').send("Press y!join and y!play to play the game again.");
-              }
-      else{
-      client.channels.get('352403126940336129').send("... and the werewolf is awake!\nWerewolf, please DM me who you want to kill.");
-      client.fetchUser(idWerewolf).then(user => {user.send("The people alive are: \n" + listDM.printDMList() + "\nTo kill, use w!kill number, ie. w!kill 0")});
-      continueGame();
+                    client.channels.get('352403126940336129').send("Press y!join and y!play to play the game again.", {
+                    file: "https://vignette2.wikia.nocookie.net/yandere-simulator/images/f/f6/Fyhgchg.jpg" // Or replace with FileOptions object
+                    });
+                    clearAll();
+            
+      }else{
+           client.channels.get('352403126940336129').send(charmer+' is **The Charmer**. Charmer, choose someone to date using y!date @username');
       }
 
 
   
     }
 }
+
+
+
+
 function vote(msg, vote){
   if(!listIfVoted.contains(msg.author.toString())){
     if (list.contains(vote)){ //if suspect is alive
-      if(suspects.contains(vote)){ //if suspect has been suspected before
-        var index= suspects.indexOf(vote);
-        var num = votes.findAt(index).getData();
-        votes.findAt(index).editData(num+1);
-        msg.channel.send(vote+" +" +votes.findAt(index).getData());
-        listIfVoted.insert(msg.author.toString());
-      }else{ //if suspect is casted first vote
-        suspects.insert(vote);
-        votes.insert(1);
-        msg.channel.send(vote+" +1");
-          listIfVoted.insert(msg.author.toString());
-      }
+      if(vote === charmer){
+        msg.channel.send('You can\'t vote the charmer.\nTry y!vote @username again.');
+      }else{
+        if(suspects.contains(vote)){ //if suspect has been suspected before
+         var index= suspects.indexOf(vote);
+         var num = votes.findAt(index).getData();
+         votes.findAt(index).editData(num+1);
+         msg.channel.send(vote+" +" +votes.findAt(index).getData());
+         listIfVoted.insert(msg.author.toString());
+        }else{ //if suspect is casted first vote
+         suspects.insert(vote);
+         votes.insert(1);
+         msg.channel.send(vote+" +1");
+         listIfVoted.insert(msg.author.toString());
+        }
+      }   
     }else{
-      msg.channel.send('You probably tried to vote for a dead person or someone outside the game.\nTry w!vote @username again.');
+      msg.channel.send('You probably tried to vote for a dead person or someone outside the game.\nTry y!vote @username again.');
     }
   }else{
     msg.reply('You already voted once.');
   }
 }
+
+
 function findPersonWithMostVotes(msg){
   var maxIndex=0;
   var max= votes.findAt(0).getData();
@@ -506,8 +571,10 @@ charmer="";
 killerClassmate="";
 killerTeacher="";
 lover="";
-deadPersonC=-1;
-deadPersonT=-1;
+deadPersonC="";
+deadPersonT="";
+indexDeadPersonC=-1;
+indexDeadPersonT=-1;
 
 idCharmer="";
 idKillerClassmate="";
@@ -522,12 +589,83 @@ alreadyKillC=false;
 alreadyKillT=false;
 
 
-weaponC=null;
-weaponT=null;
+weaponC=':pick:';
+weaponT=':knife:';
 
 
 gameCont= false;
 
 }
+function clearContinue(){
+
+listIfVoted.clear(); 
+
+suspects.clear();
+votes.clear();
+
+lover="";
+deadPersonC="";
+deadPersonT="";
+indexDeadPersonC=-1;
+indexDeadPersonT=-1;
+
+alreadyDate= false;
+
+alreadyKillC=false;
+alreadyKillT=false;
+
+
+gameCont= false;
+
+}
+function endingLastTwoLeft(msg){
+    var indexCharmer = list.indexOf(charmer);
+                if(indexCharmer==0){
+                  if(list.findAt(1).getData()==killerClassmate){
+                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live happily ever after... except '+list.findAt(1).getData()+ ' is revealed to be **Killer Kindergarten Classmate!**');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate **'+list.findAt(1).getData()+' has won the game!');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate: **'+killerClassmate+' **Killer Homeroom Teacher: **' + killerTeacher);
+                  }else if(list.findAt(1).getData()==killerTeacher){
+                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live happily ever after... except '+list.findAt(1).getData()+ ' is revealed to be **Killer Homeroom Teacher!**');
+                    client.channels.get('352403126940336129').send('**Killer Homeroom Teacher** '+list.findAt(1).getData()+' has won the game!');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate:** '+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                  }
+                  else{
+                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live... happily ever after!');
+                    client.channels.get('352403126940336129').send('Normal person '+list.findAt(1).getData()+' and '+ charmer +' has won the game!');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate: **'+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                    
+
+  
+                  }
+                  
+
+                }else{
+                  if(list.findAt(0).getData()==killerClassmate){
+                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live happily ever after... except '+list.findAt(0).getData()+ ' is revealed to be **Killer Kindergarten Classmate!**');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate** '+list.findAt(0).getData()+' has won the game!');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate: **'+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                  }else if(list.findAt(0).getData()==killerTeacher){
+                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live happily ever after... except '+list.findAt(0).getData()+ ' is revealed to be **Killer Homeroom Teacher!**');
+                    client.channels.get('352403126940336129').send('**Killer Homeroom Teacher** '+list.findAt(0).getData()+' has won the game!');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate:** '+killerClassmate+' **Killer Homeroom Teacher: **' + killerTeacher);
+                  }
+                  else{
+                    client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live... happily ever after!');
+                    client.channels.get('352403126940336129').send('Normal person '+list.findAt(0).getData()+' and '+ charmer +' has won the game!');
+                    client.channels.get('352403126940336129').send('**Killer Kindergarten Classmate:** '+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+
+
+
+                  }
+
+                }
+                    client.channels.get('352403126940336129').send("Press y!join and y!play to play the game again.", {
+                    file: "https://vignette2.wikia.nocookie.net/yandere-simulator/images/f/f6/Fyhgchg.jpg" // Or replace with FileOptions object
+                    });
+                    clearAll();
+    
+}
+
 
 client.login(config.token);
