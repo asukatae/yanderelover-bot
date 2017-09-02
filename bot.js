@@ -22,6 +22,9 @@ var lover;
 var deadPersonC;
 var deadPersonT;
 
+var deadPersonCtag;
+var deadPersonTtag;
+
 var indexDeadPersonC;
 var indexDeadPersonT;
 
@@ -191,12 +194,12 @@ client.on('message', msg => {
 
              removePersonfromLists(indexDeadPersonC);
           }else{
-             
+             console.log('Dead Person C is'+deadPersonCtag);
               list.removeNode(deadPersonC);
-              listDM.removeNode(deadPersonC);
-                console.log('Dead Person T is'+deadPersonT);
+              listDM.removeNode(deadPersonCtag);
+                
               list.removeNode(deadPersonT);
-              listDM.removeNode(deadPersonT);
+              listDM.removeNode(deadPersonTtag);
           }
             
         //4 situations     
@@ -433,6 +436,7 @@ function noteDeadC(msg, dead){
   }else if (dead<list.getSize()){
     indexDeadPersonC= dead;
     deadPersonC=list.findAt(indexDeadPersonC).getData();
+    deadPersonCtag=listDM.findAt(indexDeadPersonC).getData();
       console.log("The dead person is "+deadPersonC);
     alreadyKillC=true;
     msg.channel.send("You have killed " + listDM.findAt(indexDeadPersonC).getData());
@@ -448,6 +452,7 @@ function noteDeadT(msg, dead){
   }else if (dead<list.getSize()){
     indexDeadPersonT= dead;
     deadPersonT=list.findAt(indexDeadPersonT).getData();
+    deadPersonTtag=listDM.findAt(indexDeadPersonT).getData();
       console.log("The dead person is "+deadPersonT);
     alreadyKillT=true;
     msg.channel.send("You have killed " + listDM.findAt(indexDeadPersonT).getData());
