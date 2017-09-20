@@ -100,10 +100,12 @@ client.on('message', msg => {
                     client.channels.get('352403126940336129').send(charmer +' and ' + lover +' live happily ever after... except '+lover + ' is revealed to be **Killer Childhood Friend!**');  
                     client.channels.get('352403126940336129').send('**Killer Childhood Friend** '+killerClassmate+' has won the game!');
                     client.channels.get('352403126940336129').send('**Killer Childhood Friend: **'+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                    clearAll(); 
                 }else{
                     client.channels.get('352403126940336129').send(charmer +' and ' + lover +' live happily ever after... except '+lover + ' is revealed to be **Killer Homeroom Teacher!**');  
                     client.channels.get('352403126940336129').send('**Killer Homeroom Teacher** '+killerTeacher+' has won the game!');
                     client.channels.get('352403126940336129').send('**Killer Childhood Friend: **'+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                    clearAll(); 
                 }
             }
           else if(list.contains(killerClassmate)){ 
@@ -168,10 +170,12 @@ client.on('message', msg => {
                       client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(1).getData()+' live happily ever after... except '+list.findAt(1).getData()+ ' is revealed to be **Killer Childhood Friend!**');
                       client.channels.get('352403126940336129').send('**Killer Childhood Friend** '+list.findAt(1).getData()+' has won the game!');
                       client.channels.get('352403126940336129').send('**Killer Childhood Friend: **'+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                        clearAll(); 
                     }else{
                       client.channels.get('352403126940336129').send(charmer +' and ' + list.findAt(0).getData()+' live happily ever after... except '+list.findAt(0).getData()+ ' is revealed to be **Killer Childhood Friend!**');
                       client.channels.get('352403126940336129').send('**Killer Childhood Friend** '+list.findAt(0).getData()+' has won the game!');
                       client.channels.get('352403126940336129').send('**Killer Childhood Friend:** '+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+                        clearAll(); 
                     }
             }else{ //if there are more than 2 people left over
                 client.channels.get('352403126940336129').send('Alive: '+ list.printList() +'\nWho is the killer? Please vote with y!vote @username');
@@ -215,14 +219,33 @@ client.on('message', msg => {
               listDM.removeNode(deadPersonTtag);
           }
             
-        //4 situations     
+        //4 situations     //here
             
           if(!list.contains(killerClassmate)&& !list.contains(killerTeacher)){
                    client.channels.get('352403126940336129').send('It’s daytime, wakey wakey! \n'+ deadPersonC +' has been found killed with a ' +weaponC+' and ' + deadPersonT +' has been found killed with a ' +weaponT);
                     client.channels.get('352403126940336129').send('Both killers killed each other.');
+              
+              
+              if(lover!=killerClassmate && lover!=killerTeacher){
                     client.channels.get('352403126940336129').send(charmer +' and ' + lover +' live... happily ever after!');
                     client.channels.get('352403126940336129').send('Normal person '+lover +' and '+ charmer +' has won the game!');
+               }else if (lover ===killerClassmate || lover ===killerTeacher){
+                        
+                client.channels.get('352403126940336129').send(charmer +' lives happily with his/her harem ever after!');
+                client.channels.get('352403126940336129').send(list.printList() +' has won the game!');  
+                   
+                    
+                }
+                    
+              
+              
                     client.channels.get('352403126940336129').send('**Killer Childhood Friend:** '+killerClassmate+' **Killer Homeroom Teacher:** ' + killerTeacher);
+              
+                    client.channels.get('352403126940336129').send("Press y!join and y!play to play the game again.", {
+                    file: "https://vignette2.wikia.nocookie.net/yandere-simulator/images/f/f6/Fyhgchg.jpg" // Or replace with FileOptions object
+                    });
+              
+              
                     clearAll(); 
           }else if(list.contains(killerClassmate)&& list.contains(killerTeacher)){
                    
@@ -515,12 +538,24 @@ function waitVote(msg) {
           endingLastTwoLeft(msg);
       }
       else if(!list.contains(killerClassmate)&& !list.contains(killerTeacher)) {
-
+                if (lover!=killerClassmate && lover!= killerTeacher){
+                                        
                 client.channels.get('352403126940336129').send(charmer +' and ' + lover +' live happily ever after!');
                 client.channels.get('352403126940336129').send('Normal person '+lover+' and '+ charmer +' has won the game!');
-                client.channels.get('352403126940336129').send('**Killer Childhood Friend:** '+killerClassmate+' **Killer Homeroom Teacher: **' + killerTeacher);
 
-
+                    
+                    
+                    
+                }else if (lover ===killerClassmate || lover ===killerTeacher){
+                        
+                client.channels.get('352403126940336129').send(charmer +' lives happily with his/her harem ever after!');
+                client.channels.get('352403126940336129').send(list.printList() +' has won the game!');   
+                    
+                }
+                    
+                    
+                    
+                    client.channels.get('352403126940336129').send('**Killer Childhood Friend:** '+killerClassmate+' **Killer Homeroom Teacher: **' + killerTeacher);
                     client.channels.get('352403126940336129').send("Press y!join and y!play to play the game again.", {
                     file: "https://vignette2.wikia.nocookie.net/yandere-simulator/images/f/f6/Fyhgchg.jpg" // Or replace with FileOptions object
                     });
